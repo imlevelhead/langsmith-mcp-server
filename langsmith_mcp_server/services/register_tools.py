@@ -2,7 +2,10 @@
 
 from typing import Any, Dict, List, Optional
 
-from langsmith_mcp_server.services.tools.datasets import list_datasets_tool, list_examples_tool
+from langsmith_mcp_server.services.tools.datasets import (
+    list_datasets_tool,
+    list_examples_tool,
+)
 from langsmith_mcp_server.services.tools.prompts import (
     get_prompt_tool,
     list_prompts_tool,
@@ -89,7 +92,9 @@ def register_tools(mcp, langsmith_client):
 
     # Register analytics tools
     @mcp.tool()
-    def get_project_runs_stats(project_name: str, is_last_run: str = "true") -> Dict[str, Any]:
+    def get_project_runs_stats(
+        project_name: str, is_last_run: str = "true"
+    ) -> Dict[str, Any]:
         """
         Get statistics about runs in a LangSmith project.
 
@@ -176,20 +181,34 @@ def register_tools(mcp, langsmith_client):
     def list_examples(
         dataset_id: Optional[str] = None,
         dataset_name: Optional[str] = None,
+        example_ids: Optional[List[str]] = None,
+        filter: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        splits: Optional[List[str]] = None,
+        inline_s3_urls: Optional[bool] = None,
+        include_attachments: Optional[bool] = None,
+        as_of: Optional[str] = None,
         limit: Optional[int] = None,
         offset: Optional[int] = None,
     ) -> Dict[str, Any]:
         """
-        Fetch examples from a LangSmith dataset.
+        Fetch examples from a LangSmith dataset with advanced filtering options.
 
-        Note: Either dataset_id or dataset_name must be provided to specify the dataset.
-        If both are provided, dataset_id takes precedence.
+        Note: Either dataset_id, dataset_name, or example_ids must be provided.
+        If multiple are provided, they are used in order of precedence: example_ids, dataset_id, dataset_name.
 
         Args:
             dataset_id (Optional[str]): Dataset ID to retrieve examples from
             dataset_name (Optional[str]): Dataset name to retrieve examples from
+            example_ids (Optional[List[str]]): List of specific example IDs to retrieve
             limit (Optional[int]): Maximum number of examples to return
             offset (Optional[int]): Number of examples to skip before starting to return results
+            filter (Optional[str]): Filter string using LangSmith query syntax (e.g., 'has(metadata, {"key": "value"})')
+            metadata (Optional[Dict[str, Any]]): Dictionary of metadata to filter by
+            splits (Optional[List[str]]): List of dataset splits to include examples from
+            inline_s3_urls (Optional[bool]): Whether to inline S3 URLs (default: SDK default if not specified)
+            include_attachments (Optional[bool]): Whether to include attachments in response (default: SDK default if not specified)
+            as_of (Optional[str]): Dataset version tag OR ISO timestamp to retrieve examples as of that version/time
 
         Returns:
             Dict[str, Any]: Dictionary containing the examples and metadata,
@@ -200,6 +219,13 @@ def register_tools(mcp, langsmith_client):
                 client,
                 dataset_id=dataset_id,
                 dataset_name=dataset_name,
+                example_ids=example_ids,
+                filter=filter,
+                metadata=metadata,
+                splits=splits,
+                inline_s3_urls=inline_s3_urls,
+                include_attachments=include_attachments,
+                as_of=as_of,
                 limit=limit,
                 offset=offset,
             )

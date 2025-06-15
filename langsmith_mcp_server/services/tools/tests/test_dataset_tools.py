@@ -5,7 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from langsmith_mcp_server.services.tools.datasets import list_datasets_tool
+from langsmith_mcp_server.services.tools.datasets import list_datasets_tool, list_examples_tool
 
 
 class MockDataset:
@@ -26,6 +26,34 @@ class MockDataset:
         self.data_type = data_type
         self.created_at = created_at or datetime(2024, 1, 1, 12, 0, 0)
         self.modified_at = modified_at or datetime(2024, 1, 2, 12, 0, 0)
+
+
+class MockExample:
+    """Mock example object to simulate LangSmith example responses."""
+
+    def __init__(
+        self,
+        id: str,
+        dataset_id: str,
+        inputs: dict = None,
+        outputs: dict = None,
+        metadata: dict = None,
+        created_at: datetime = None,
+        modified_at: datetime = None,
+        runs: list = None,
+        source_run_id: str = None,
+        attachments: dict = None,
+    ):
+        self.id = id
+        self.dataset_id = dataset_id
+        self.inputs = inputs or {"question": "What is 2+2?"}
+        self.outputs = outputs or {"answer": "4"}
+        self.metadata = metadata or {}
+        self.created_at = created_at or datetime(2024, 1, 1, 12, 0, 0)
+        self.modified_at = modified_at or datetime(2024, 1, 2, 12, 0, 0)
+        self.runs = runs or []
+        self.source_run_id = source_run_id
+        self.attachments = attachments or {}
 
 
 @pytest.fixture
@@ -56,6 +84,36 @@ def sample_datasets():
             name="Empty Dataset",
             description=None,
             data_type="kv",
+        ),
+    ]
+
+
+@pytest.fixture
+def sample_examples():
+    """Create sample example objects for testing."""
+    return [
+        MockExample(
+            id="example-1",
+            dataset_id="dataset-1",
+            inputs={"question": "What is 2+2?"},
+            outputs={"answer": "4"},
+            metadata={"difficulty": "easy"},
+            source_run_id="run-123",
+        ),
+        MockExample(
+            id="example-2",
+            dataset_id="dataset-1",
+            inputs={"question": "What is the capital of France?"},
+            outputs={"answer": "Paris"},
+            metadata={"difficulty": "medium", "topic": "geography"},
+            source_run_id="run-456",
+        ),
+        MockExample(
+            id="example-3",
+            dataset_id="dataset-2",
+            inputs={"prompt": "Explain quantum physics"},
+            outputs={"explanation": "Quantum physics is..."},
+            metadata={"difficulty": "hard", "topic": "science"},
         ),
     ]
 
@@ -260,3 +318,292 @@ class TestListDatasetsTool:
 
         assert "error" in result
         assert "Error fetching datasets: API Error" in result["error"]
+
+
+class TestListExamplesTool:
+    """Test cases for list_examples_tool function."""
+
+    def test_list_examples_success_with_dataset_id(self, mock_client, sample_examples):
+        """Test successful examples listing with dataset_id."""
+        mock_client.list_examples.return_value = iter(sample_examples[:2])
+
+        result = list_examples_tool(mock_client, dataset_id="dataset-1")
+
+        assert "examples" in result
+        assert "total_count" in result
+        assert result["total_count"] == 2
+        assert len(result["examples"]) == 2
+
+        # Check first example structure
+        first_example = result["examples"][0]
+        expected_attrs = [
+            "id",
+            "dataset_id",
+            "inputs",
+            "outputs",
+            "metadata",
+            "created_at",
+            "modified_at",
+            "runs",
+            "source_run_id",
+            "attachments",
+        ]
+        for attr in expected_attrs:
+            assert attr in first_example
+
+        # Verify data and serialization
+        assert first_example["id"] == "example-1"
+        assert first_example["dataset_id"] == "dataset-1"
+        assert first_example["inputs"] == {"question": "What is 2+2?"}
+        assert first_example["outputs"] == {"answer": "4"}
+        assert first_example["metadata"] == {"difficulty": "easy"}
+        assert first_example["created_at"] == "2024-01-01T12:00:00"
+        assert first_example["modified_at"] == "2024-01-02T12:00:00"
+        assert first_example["source_run_id"] == "run-123"
+
+        mock_client.list_examples.assert_called_once_with(dataset_id="dataset-1")
+
+    def test_list_examples_success_with_dataset_name(self, mock_client, sample_examples):
+        """Test successful examples listing with dataset_name."""
+        mock_client.list_examples.return_value = iter(sample_examples[:1])
+
+        result = list_examples_tool(mock_client, dataset_name="my-dataset")
+
+        assert result["total_count"] == 1
+        assert result["examples"][0]["id"] == "example-1"
+
+        mock_client.list_examples.assert_called_once_with(dataset_name="my-dataset")
+
+    def test_list_examples_with_example_ids(self, mock_client, sample_examples):
+        """Test examples listing with specific example_ids."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        example_ids = ["example-1"]
+        result = list_examples_tool(mock_client, example_ids=example_ids)
+
+        assert result["total_count"] == 1
+        assert result["examples"][0]["id"] == "example-1"
+
+        mock_client.list_examples.assert_called_once_with(example_ids=example_ids)
+
+    def test_list_examples_with_pagination(self, mock_client, sample_examples):
+        """Test examples listing with limit and offset."""
+        mock_client.list_examples.return_value = iter(sample_examples[:2])
+
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", limit=2, offset=5)
+
+        assert result["total_count"] == 2
+
+        mock_client.list_examples.assert_called_once_with(
+            dataset_id="dataset-1", limit=2, offset=5
+        )
+
+    def test_list_examples_with_filter(self, mock_client, sample_examples):
+        """Test examples listing with filter string."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        filter_str = 'has(metadata, {"difficulty": "easy"})'
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", filter=filter_str)
+
+        assert result["total_count"] == 1
+
+        mock_client.list_examples.assert_called_once_with(
+            dataset_id="dataset-1", filter=filter_str
+        )
+
+    def test_list_examples_with_metadata_filter(self, mock_client, sample_examples):
+        """Test examples listing with metadata filter."""
+        mock_client.list_examples.return_value = iter([sample_examples[1]])
+
+        metadata_filter = {"topic": "geography"}
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", metadata=metadata_filter)
+
+        assert result["total_count"] == 1
+
+        mock_client.list_examples.assert_called_once_with(
+            dataset_id="dataset-1", metadata=metadata_filter
+        )
+
+    def test_list_examples_with_splits(self, mock_client, sample_examples):
+        """Test examples listing with splits filter."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        splits = ["train", "test"]
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", splits=splits)
+
+        assert result["total_count"] == 1
+
+        mock_client.list_examples.assert_called_once_with(
+            dataset_id="dataset-1", splits=splits
+        )
+
+    def test_list_examples_with_attachment_options(self, mock_client, sample_examples):
+        """Test examples listing with attachment and S3 URL options."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        result = list_examples_tool(
+            mock_client,
+            dataset_id="dataset-1",
+            inline_s3_urls=False,
+            include_attachments=True,
+        )
+
+        assert result["total_count"] == 1
+
+        mock_client.list_examples.assert_called_once_with(
+            dataset_id="dataset-1", inline_s3_urls=False, include_attachments=True
+        )
+
+    def test_list_examples_with_as_of_timestamp(self, mock_client, sample_examples):
+        """Test examples listing with as_of timestamp (should convert to datetime)."""
+        from datetime import datetime
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        as_of_str = "2024-01-15T10:00:00Z"
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", as_of=as_of_str)
+
+        assert result["total_count"] == 1
+
+        # Verify that the timestamp was converted to datetime
+        call_args = mock_client.list_examples.call_args[1]
+        assert "as_of" in call_args
+        assert isinstance(call_args["as_of"], datetime)
+        assert call_args["as_of"].isoformat() == "2024-01-15T10:00:00+00:00"
+
+    def test_list_examples_with_as_of_version_tag(self, mock_client, sample_examples):
+        """Test examples listing with as_of version tag (should remain string)."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        as_of_tag = "v1.0"
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", as_of=as_of_tag)
+
+        assert result["total_count"] == 1
+
+        # Verify that the version tag remained as string
+        call_args = mock_client.list_examples.call_args[1]
+        assert "as_of" in call_args
+        assert call_args["as_of"] == "v1.0"
+
+    def test_list_examples_with_all_parameters(self, mock_client, sample_examples):
+        """Test examples listing with all parameters."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        result = list_examples_tool(
+            mock_client,
+            dataset_id="dataset-1",
+            dataset_name="my-dataset",
+            example_ids=["example-1"],
+            limit=10,
+            offset=0,
+            filter='has(metadata, {"difficulty": "easy"})',
+            metadata={"topic": "math"},
+            splits=["train"],
+            inline_s3_urls=True,
+            include_attachments=False,
+            as_of="v1.0",
+        )
+
+        assert result["total_count"] == 1
+
+        mock_client.list_examples.assert_called_once_with(
+            dataset_id="dataset-1",
+            dataset_name="my-dataset",
+            example_ids=["example-1"],
+            limit=10,
+            offset=0,
+            filter='has(metadata, {"difficulty": "easy"})',
+            metadata={"topic": "math"},
+            splits=["train"],
+            inline_s3_urls=True,
+            include_attachments=False,
+            as_of="v1.0",
+        )
+
+    def test_list_examples_empty_result(self, mock_client):
+        """Test examples listing when no examples are found."""
+        mock_client.list_examples.return_value = iter([])
+
+        result = list_examples_tool(mock_client, dataset_id="dataset-1")
+
+        assert result["total_count"] == 0
+        assert result["examples"] == []
+
+    def test_list_examples_with_none_values(self, mock_client, sample_examples):
+        """Test that None values are properly handled and not passed to client."""
+        mock_client.list_examples.return_value = iter(sample_examples)
+
+        result = list_examples_tool(
+            mock_client,
+            dataset_id=None,
+            dataset_name=None,
+            example_ids=None,
+            limit=None,
+            offset=None,
+            filter=None,
+            metadata=None,
+            splits=None,
+            inline_s3_urls=None,
+            include_attachments=None,
+            as_of=None,
+        )
+
+        assert result["total_count"] == 3
+
+        # Should not pass any parameters since all are None
+        mock_client.list_examples.assert_called_once_with()
+
+    def test_list_examples_handles_missing_attributes(self, mock_client):
+        """Test handling of examples with missing attributes."""
+        # Create a mock example with missing attributes
+        incomplete_example = Mock()
+        incomplete_example.id = "incomplete-1"
+        incomplete_example.dataset_id = "dataset-1"
+        incomplete_example.inputs = {"question": "Test?"}
+        # Configure missing attributes to return None
+        incomplete_example.configure_mock(
+            **{
+                "outputs": None,
+                "metadata": None,
+                "created_at": None,
+                "modified_at": None,
+                "runs": None,
+                "source_run_id": None,
+                "attachments": None,
+            }
+        )
+
+        mock_client.list_examples.return_value = iter([incomplete_example])
+
+        result = list_examples_tool(mock_client, dataset_id="dataset-1")
+
+        assert result["total_count"] == 1
+        example = result["examples"][0]
+        assert example["id"] == "incomplete-1"
+        assert example["dataset_id"] == "dataset-1"
+        assert example["inputs"] == {"question": "Test?"}
+        # Missing attributes should be None
+        assert example["outputs"] is None
+        assert example["metadata"] is None
+
+    def test_list_examples_client_exception(self, mock_client):
+        """Test error handling when client raises an exception."""
+        mock_client.list_examples.side_effect = Exception("API Error")
+
+        result = list_examples_tool(mock_client, dataset_id="dataset-1")
+
+        assert "error" in result
+        assert "Error fetching examples: API Error" in result["error"]
+
+    def test_list_examples_as_of_invalid_datetime_fallback(self, mock_client, sample_examples):
+        """Test that invalid datetime strings fall back to being treated as version tags."""
+        mock_client.list_examples.return_value = iter([sample_examples[0]])
+
+        # This looks like a timestamp but is invalid
+        invalid_timestamp = "2024-13-45T25:99:99Z"
+        result = list_examples_tool(mock_client, dataset_id="dataset-1", as_of=invalid_timestamp)
+
+        assert result["total_count"] == 1
+
+        # Should pass the invalid timestamp as a string (version tag)
+        call_args = mock_client.list_examples.call_args[1]
+        assert call_args["as_of"] == invalid_timestamp
