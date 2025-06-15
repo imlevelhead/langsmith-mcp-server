@@ -2,7 +2,7 @@
 
 from typing import Any, Dict, List, Optional
 
-from langsmith_mcp_server.services.tools.datasets import list_datasets_tool
+from langsmith_mcp_server.services.tools.datasets import list_datasets_tool, list_examples_tool
 from langsmith_mcp_server.services.tools.prompts import (
     get_prompt_tool,
     list_prompts_tool,
@@ -168,6 +168,40 @@ def register_tools(mcp, langsmith_client):
                 dataset_name_contains=dataset_name_contains,
                 metadata=metadata,
                 limit=limit,
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def list_examples(
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fetch examples from a LangSmith dataset.
+
+        Note: Either dataset_id or dataset_name must be provided to specify the dataset.
+        If both are provided, dataset_id takes precedence.
+
+        Args:
+            dataset_id (Optional[str]): Dataset ID to retrieve examples from
+            dataset_name (Optional[str]): Dataset name to retrieve examples from
+            limit (Optional[int]): Maximum number of examples to return
+            offset (Optional[int]): Number of examples to skip before starting to return results
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the examples and metadata,
+                            or an error message if the examples cannot be retrieved
+        """
+        try:
+            return list_examples_tool(
+                client,
+                dataset_id=dataset_id,
+                dataset_name=dataset_name,
+                limit=limit,
+                offset=offset,
             )
         except Exception as e:
             return {"error": str(e)}
