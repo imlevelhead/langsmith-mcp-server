@@ -5,7 +5,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from langsmith_mcp_server.services.tools.datasets import list_datasets_tool, list_examples_tool
+from langsmith_mcp_server.services.tools.datasets import (
+    _parse_as_of_parameter,
+    list_datasets_tool,
+    list_examples_tool,
+    read_dataset_tool,
+    read_example_tool,
+)
 
 
 class MockDataset:
@@ -602,3 +608,248 @@ class TestListExamplesTool:
         # Should pass the invalid timestamp as a string (version tag)
         call_args = mock_client.list_examples.call_args[1]
         assert call_args["as_of"] == invalid_timestamp
+
+
+class TestReadDatasetTool:
+    """Test cases for read_dataset_tool function."""
+
+    def test_read_dataset_success_with_id(self, mock_client, sample_datasets):
+        """Test successful dataset reading with dataset_id."""
+        mock_client.read_dataset.return_value = sample_datasets[0]
+
+        result = read_dataset_tool(mock_client, dataset_id="dataset-1")
+
+        assert "dataset" in result
+        assert "error" not in result
+
+        dataset = result["dataset"]
+        assert dataset["id"] == "dataset-1"
+        assert dataset["name"] == "Test Dataset 1"
+        assert dataset["data_type"] == "kv"
+        assert dataset["created_at"] == "2024-01-01T12:00:00"
+
+        mock_client.read_dataset.assert_called_once_with(dataset_id="dataset-1")
+
+    def test_read_dataset_success_with_name(self, mock_client, sample_datasets):
+        """Test successful dataset reading with dataset_name."""
+        mock_client.read_dataset.return_value = sample_datasets[1]
+
+        result = read_dataset_tool(mock_client, dataset_name="Chat Dataset")
+
+        assert "dataset" in result
+        dataset = result["dataset"]
+        assert dataset["name"] == "Chat Dataset"
+        assert dataset["data_type"] == "chat"
+
+        mock_client.read_dataset.assert_called_once_with(dataset_name="Chat Dataset")
+
+    def test_read_dataset_with_both_params(self, mock_client, sample_datasets):
+        """Test dataset reading with both dataset_id and dataset_name."""
+        mock_client.read_dataset.return_value = sample_datasets[0]
+
+        result = read_dataset_tool(
+            mock_client, dataset_id="dataset-1", dataset_name="Test Dataset 1"
+        )
+
+        assert "dataset" in result
+        # Both parameters should be passed to client
+        mock_client.read_dataset.assert_called_once_with(
+            dataset_id="dataset-1", dataset_name="Test Dataset 1"
+        )
+
+    def test_read_dataset_client_exception(self, mock_client):
+        """Test error handling when client raises an exception."""
+        mock_client.read_dataset.side_effect = Exception("Dataset not found")
+
+        result = read_dataset_tool(mock_client, dataset_id="nonexistent")
+
+        assert "error" in result
+        assert "Error reading dataset: Dataset not found" in result["error"]
+
+    def test_read_dataset_with_none_values(self, mock_client, sample_datasets):
+        """Test that None values are properly handled."""
+        mock_client.read_dataset.return_value = sample_datasets[0]
+
+        result = read_dataset_tool(mock_client, dataset_id=None, dataset_name=None)
+
+        assert "dataset" in result
+        # Should not pass any parameters since all are None
+        mock_client.read_dataset.assert_called_once_with()
+
+
+class TestReadExampleTool:
+    """Test cases for read_example_tool function."""
+
+    def test_read_example_success(self, mock_client, sample_examples):
+        """Test successful example reading."""
+        mock_client.read_example.return_value = sample_examples[0]
+
+        result = read_example_tool(mock_client, example_id="example-1")
+
+        assert "example" in result
+        assert "error" not in result
+
+        example = result["example"]
+        assert example["id"] == "example-1"
+        assert example["dataset_id"] == "dataset-1"
+        assert example["inputs"] == {"question": "What is 2+2?"}
+        assert example["outputs"] == {"answer": "4"}
+        assert example["created_at"] == "2024-01-01T12:00:00"
+        assert example["source_run_id"] == "run-123"
+
+        mock_client.read_example.assert_called_once_with(example_id="example-1")
+
+    def test_read_example_with_as_of_timestamp(self, mock_client, sample_examples):
+        """Test example reading with as_of timestamp (should convert to datetime)."""
+        from datetime import datetime
+
+        mock_client.read_example.return_value = sample_examples[0]
+
+        as_of_str = "2024-01-15T10:00:00Z"
+        result = read_example_tool(mock_client, example_id="example-1", as_of=as_of_str)
+
+        assert "example" in result
+
+        # Verify that the timestamp was converted to datetime
+        call_args = mock_client.read_example.call_args[1]
+        assert "as_of" in call_args
+        assert isinstance(call_args["as_of"], datetime)
+        assert call_args["as_of"].isoformat() == "2024-01-15T10:00:00+00:00"
+
+    def test_read_example_with_as_of_version_tag(self, mock_client, sample_examples):
+        """Test example reading with as_of version tag (should remain string)."""
+        mock_client.read_example.return_value = sample_examples[0]
+
+        as_of_tag = "v1.0"
+        result = read_example_tool(mock_client, example_id="example-1", as_of=as_of_tag)
+
+        assert "example" in result
+
+        # Verify that the version tag remained as string
+        call_args = mock_client.read_example.call_args[1]
+        assert "as_of" in call_args
+        assert call_args["as_of"] == "v1.0"
+
+    def test_read_example_client_exception(self, mock_client):
+        """Test error handling when client raises an exception."""
+        mock_client.read_example.side_effect = Exception("Example not found")
+
+        result = read_example_tool(mock_client, example_id="nonexistent")
+
+        assert "error" in result
+        assert "Error reading example: Example not found" in result["error"]
+
+    def test_read_example_handles_missing_attributes(self, mock_client):
+        """Test handling of examples with missing attributes."""
+        # Create a mock example with missing attributes
+        incomplete_example = Mock()
+        incomplete_example.id = "incomplete-1"
+        incomplete_example.dataset_id = "dataset-1"
+        incomplete_example.inputs = {"question": "Test?"}
+        incomplete_example.configure_mock(
+            **{
+                "outputs": None,
+                "metadata": None,
+                "created_at": None,
+                "modified_at": None,
+                "runs": None,
+                "source_run_id": None,
+                "attachments": None,
+            }
+        )
+
+        mock_client.read_example.return_value = incomplete_example
+
+        result = read_example_tool(mock_client, example_id="incomplete-1")
+
+        assert "example" in result
+        example = result["example"]
+        assert example["id"] == "incomplete-1"
+        assert example["dataset_id"] == "dataset-1"
+        assert example["inputs"] == {"question": "Test?"}
+        # Missing attributes should be None
+        assert example["outputs"] is None
+        assert example["metadata"] is None
+
+    def test_read_example_as_of_invalid_datetime_fallback(self, mock_client, sample_examples):
+        """Test that invalid datetime strings fall back to being treated as version tags."""
+        mock_client.read_example.return_value = sample_examples[0]
+
+        # This looks like a timestamp but is invalid
+        invalid_timestamp = "2024-13-45T25:99:99Z"
+        result = read_example_tool(mock_client, example_id="example-1", as_of=invalid_timestamp)
+
+        assert "example" in result
+
+        # Should pass the invalid timestamp as a string (version tag)
+        call_args = mock_client.read_example.call_args[1]
+        assert call_args["as_of"] == invalid_timestamp
+
+
+class TestParseAsOfParameter:
+    """Test cases for _parse_as_of_parameter helper function."""
+
+    def test_parse_iso_timestamp_with_z(self):
+        """Test parsing ISO timestamp with Z suffix."""
+        from datetime import datetime
+
+        result = _parse_as_of_parameter("2024-01-15T10:00:00Z")
+
+        assert isinstance(result, datetime)
+        assert result.isoformat() == "2024-01-15T10:00:00+00:00"
+
+    def test_parse_iso_timestamp_with_offset(self):
+        """Test parsing ISO timestamp with timezone offset."""
+        from datetime import datetime
+
+        result = _parse_as_of_parameter("2024-01-15T10:00:00+05:00")
+
+        assert isinstance(result, datetime)
+        assert result.isoformat() == "2024-01-15T10:00:00+05:00"
+
+    def test_parse_iso_timestamp_without_timezone(self):
+        """Test parsing ISO timestamp without timezone."""
+        from datetime import datetime
+
+        result = _parse_as_of_parameter("2024-01-15T10:00:00")
+
+        assert isinstance(result, datetime)
+        assert result.isoformat() == "2024-01-15T10:00:00"
+
+    def test_parse_version_tag(self):
+        """Test that version tags are returned as strings."""
+        version_tags = ["v1.0", "production", "latest", "baseline"]
+
+        for tag in version_tags:
+            result = _parse_as_of_parameter(tag)
+            assert isinstance(result, str)
+            assert result == tag
+
+    def test_parse_invalid_timestamp_fallback(self):
+        """Test that invalid timestamps fall back to string."""
+        invalid_timestamps = [
+            "2024-13-45T25:99:99Z",  # Invalid date/time values
+            "not-a-timestamp",  # Not a timestamp at all
+            "invalid-date-format",  # Invalid format
+        ]
+
+        for invalid in invalid_timestamps:
+            result = _parse_as_of_parameter(invalid)
+            assert isinstance(result, str)
+            assert result == invalid
+
+    def test_parse_date_only_valid(self):
+        """Test that date-only strings are parsed as datetime."""
+        from datetime import datetime
+
+        result = _parse_as_of_parameter("2024-01-15")
+
+        assert isinstance(result, datetime)
+        assert result.date().isoformat() == "2024-01-15"
+
+    def test_parse_empty_string(self):
+        """Test parsing empty string."""
+        result = _parse_as_of_parameter("")
+
+        assert isinstance(result, str)
+        assert result == ""

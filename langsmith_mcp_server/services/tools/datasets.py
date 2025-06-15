@@ -1,7 +1,26 @@
 """Tools for interacting with LangSmith datasets."""
 
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, Union
+
+
+def _parse_as_of_parameter(as_of: str) -> Union[datetime, str]:
+    """
+    Parse the as_of parameter, converting ISO timestamps to datetime objects
+    while leaving version tags as strings.
+
+    Args:
+        as_of: Dataset version tag OR ISO timestamp string
+
+    Returns:
+        datetime object if as_of is a valid ISO timestamp, otherwise the original string
+    """
+    try:
+        # Try to parse as ISO format datetime
+        return datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        # If parsing fails, assume it's a version tag and return as string
+        return as_of
 
 
 def list_datasets_tool(
@@ -131,12 +150,7 @@ def list_examples_tool(
         if include_attachments is not None:
             kwargs["include_attachments"] = include_attachments
         if as_of is not None:
-            # Try to parse as ISO format datetime, fallback to version tag string
-            try:
-                kwargs["as_of"] = datetime.fromisoformat(as_of.replace("Z", "+00:00"))
-            except (ValueError, AttributeError):
-                # If parsing fails, assume it's a version tag and pass as string
-                kwargs["as_of"] = as_of
+            kwargs["as_of"] = _parse_as_of_parameter(as_of)
         if limit is not None:
             kwargs["limit"] = limit
         if offset is not None:
@@ -179,3 +193,122 @@ def list_examples_tool(
 
     except Exception as e:
         return {"error": f"Error fetching examples: {str(e)}"}
+
+
+def read_dataset_tool(
+    client,
+    dataset_id: str = None,
+    dataset_name: str = None,
+) -> Dict[str, Any]:
+    """
+    Read a specific dataset from LangSmith.
+
+    Args:
+        client: LangSmith client instance
+        dataset_id: Dataset ID to retrieve
+        dataset_name: Dataset name to retrieve
+
+    Returns:
+        Dictionary containing the dataset details
+    """
+    try:
+        # Prepare kwargs for the client call
+        kwargs = {}
+        if dataset_id is not None:
+            kwargs["dataset_id"] = dataset_id
+        if dataset_name is not None:
+            kwargs["dataset_name"] = dataset_name
+
+        # Call the SDK
+        dataset = client.read_dataset(**kwargs)
+
+        # Attributes to return for the dataset
+        attrs = [
+            "id",
+            "name",
+            "inputs_schema_definition",
+            "outputs_schema_definition",
+            "description",
+            "data_type",
+            "example_count",
+            "session_count",
+            "created_at",
+            "modified_at",
+            "last_session_start_time",
+        ]
+
+        dataset_dict = {}
+        for attr in attrs:
+            value = getattr(dataset, attr, None)
+            # Format datetimes as isoformat
+            if (
+                attr in ("created_at", "modified_at", "last_session_start_time")
+                and value is not None
+            ):
+                value = value.isoformat()
+            # Convert UUIDs to strings for JSON serialization
+            elif attr == "id" and value is not None:
+                value = str(value)
+            dataset_dict[attr] = value
+
+        return {"dataset": dataset_dict}
+
+    except Exception as e:
+        return {"error": f"Error reading dataset: {str(e)}"}
+
+
+def read_example_tool(
+    client,
+    example_id: str,
+    as_of: str = None,
+) -> Dict[str, Any]:
+    """
+    Read a specific example from LangSmith.
+
+    Args:
+        client: LangSmith client instance
+        example_id: Example ID to retrieve
+        as_of: Dataset version tag OR ISO timestamp to retrieve the example as of that version/time
+
+    Returns:
+        Dictionary containing the example details
+    """
+    try:
+        # Prepare kwargs for the client call
+        kwargs = {"example_id": example_id}
+
+        if as_of is not None:
+            kwargs["as_of"] = _parse_as_of_parameter(as_of)
+
+        # Call the SDK
+        example = client.read_example(**kwargs)
+
+        # Attributes to return for the example
+        attrs = [
+            "id",
+            "dataset_id",
+            "inputs",
+            "outputs",
+            "metadata",
+            "created_at",
+            "modified_at",
+            "runs",
+            "source_run_id",
+            "attachments",
+        ]
+
+        example_dict = {}
+        for attr in attrs:
+            value = getattr(example, attr, None)
+            # Format datetimes as isoformat
+            if attr in ("created_at", "modified_at") and value is not None:
+                value = value.isoformat()
+            # Convert UUIDs to strings for JSON serialization
+            elif attr in ("id", "dataset_id", "source_run_id") and value is not None:
+                value = str(value)
+            example_dict[attr] = value
+
+        return {"example": example_dict}
+
+    except Exception as e:
+        return {"error": f"Error reading example: {str(e)}"}

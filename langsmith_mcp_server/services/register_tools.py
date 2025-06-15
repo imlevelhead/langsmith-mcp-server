@@ -5,6 +5,8 @@ from typing import Any, Dict, List, Optional
 from langsmith_mcp_server.services.tools.datasets import (
     list_datasets_tool,
     list_examples_tool,
+    read_dataset_tool,
+    read_example_tool,
 )
 from langsmith_mcp_server.services.tools.prompts import (
     get_prompt_tool,
@@ -226,6 +228,59 @@ def register_tools(mcp, langsmith_client):
                 as_of=as_of,
                 limit=limit,
                 offset=offset,
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def read_dataset(
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Read a specific dataset from LangSmith.
+
+        Note: Either dataset_id or dataset_name must be provided to identify the dataset.
+        If both are provided, dataset_id takes precedence.
+
+        Args:
+            dataset_id (Optional[str]): Dataset ID to retrieve
+            dataset_name (Optional[str]): Dataset name to retrieve
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the dataset details,
+                            or an error message if the dataset cannot be retrieved
+        """
+        try:
+            return read_dataset_tool(
+                client,
+                dataset_id=dataset_id,
+                dataset_name=dataset_name,
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def read_example(
+        example_id: str,
+        as_of: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Read a specific example from LangSmith.
+
+        Args:
+            example_id (str): Example ID to retrieve
+            as_of (Optional[str]): Dataset version tag OR ISO timestamp to retrieve the example as of that version/time
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the example details,
+                            or an error message if the example cannot be retrieved
+        """
+        try:
+            return read_example_tool(
+                client,
+                example_id=example_id,
+                as_of=as_of,
             )
         except Exception as e:
             return {"error": str(e)}
