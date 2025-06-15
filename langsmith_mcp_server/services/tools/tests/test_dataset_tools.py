@@ -394,9 +394,7 @@ class TestListExamplesTool:
 
         assert result["total_count"] == 2
 
-        mock_client.list_examples.assert_called_once_with(
-            dataset_id="dataset-1", limit=2, offset=5
-        )
+        mock_client.list_examples.assert_called_once_with(dataset_id="dataset-1", limit=2, offset=5)
 
     def test_list_examples_with_filter(self, mock_client, sample_examples):
         """Test examples listing with filter string."""
@@ -407,9 +405,7 @@ class TestListExamplesTool:
 
         assert result["total_count"] == 1
 
-        mock_client.list_examples.assert_called_once_with(
-            dataset_id="dataset-1", filter=filter_str
-        )
+        mock_client.list_examples.assert_called_once_with(dataset_id="dataset-1", filter=filter_str)
 
     def test_list_examples_with_metadata_filter(self, mock_client, sample_examples):
         """Test examples listing with metadata filter."""
@@ -433,9 +429,7 @@ class TestListExamplesTool:
 
         assert result["total_count"] == 1
 
-        mock_client.list_examples.assert_called_once_with(
-            dataset_id="dataset-1", splits=splits
-        )
+        mock_client.list_examples.assert_called_once_with(dataset_id="dataset-1", splits=splits)
 
     def test_list_examples_with_attachment_options(self, mock_client, sample_examples):
         """Test examples listing with attachment and S3 URL options."""
@@ -457,6 +451,7 @@ class TestListExamplesTool:
     def test_list_examples_with_as_of_timestamp(self, mock_client, sample_examples):
         """Test examples listing with as_of timestamp (should convert to datetime)."""
         from datetime import datetime
+
         mock_client.list_examples.return_value = iter([sample_examples[0]])
 
         as_of_str = "2024-01-15T10:00:00Z"

@@ -170,9 +170,7 @@ def list_examples_tool(
                 if attr in ("created_at", "modified_at") and value is not None:
                     value = value.isoformat()
                 # Convert UUIDs to strings for JSON serialization
-                elif (
-                    attr in ("id", "dataset_id", "source_run_id") and value is not None
-                ):
+                elif attr in ("id", "dataset_id", "source_run_id") and value is not None:
                     value = str(value)
                 example_dict[attr] = value
             formatted_examples.append(example_dict)
