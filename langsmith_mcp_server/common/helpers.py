@@ -1,7 +1,8 @@
 """Helper functions for the LangSmith MCP server."""
 
 import re
-from typing import Any, Dict, Optional
+from datetime import datetime
+from typing import Any, Dict, Optional, Union
 
 
 def get_langgraph_app_host_name(run_stats: dict) -> Optional[str]:
@@ -24,6 +25,25 @@ def get_langgraph_app_host_name(run_stats: dict) -> Optional[str]:
             except re.error:
                 continue
     return None
+
+
+def _parse_as_of_parameter(as_of: str) -> Union[datetime, str]:
+    """
+    Parse the as_of parameter, converting ISO timestamps to datetime objects
+    while leaving version tags as strings.
+
+    Args:
+        as_of: Dataset version tag OR ISO timestamp string
+
+    Returns:
+        datetime object if as_of is a valid ISO timestamp, otherwise the original string
+    """
+    try:
+        # Try to parse as ISO format datetime
+        return datetime.fromisoformat(as_of.replace("Z", "+00:00"))
+    except (ValueError, AttributeError):
+        # If parsing fails, assume it's a version tag and return as string
+        return as_of
 
 
 def get_last_run_stats(client, project_name: str) -> Dict[str, Any]:

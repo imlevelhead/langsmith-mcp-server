@@ -1,8 +1,17 @@
 """Registration module for LangSmith MCP tools."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
-from langsmith_mcp_server.services.tools.prompts import get_prompt_tool, list_prompts_tool
+from langsmith_mcp_server.services.tools.datasets import (
+    list_datasets_tool,
+    list_examples_tool,
+    read_dataset_tool,
+    read_example_tool,
+)
+from langsmith_mcp_server.services.tools.prompts import (
+    get_prompt_tool,
+    list_prompts_tool,
+)
 from langsmith_mcp_server.services.tools.traces import (
     fetch_trace_tool,
     get_project_runs_stats_tool,
@@ -125,5 +134,153 @@ def register_tools(mcp, langsmith_client):
         """
         try:
             return fetch_trace_tool(client, project_name, trace_id)
+        except Exception as e:
+            return {"error": str(e)}
+
+    # Register dataset tools
+    @mcp.tool()
+    def list_datasets(
+        dataset_ids: Optional[List[str]] = None,
+        data_type: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        dataset_name_contains: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        limit: int = 20,
+    ) -> Dict[str, Any]:
+        """
+        Fetch LangSmith datasets.
+
+        Note: If no arguments are provided, all datasets will be returned.
+
+        Args:
+            dataset_ids (Optional[List[str]]): List of dataset IDs to filter by
+            data_type (Optional[str]): Filter by dataset data type (e.g., 'chat', 'kv')
+            dataset_name (Optional[str]): Filter by exact dataset name
+            dataset_name_contains (Optional[str]): Filter by substring in dataset name
+            metadata (Optional[Dict[str, Any]]): Filter by metadata dict
+            limit (int): Max number of datasets to return (default: 20)
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the datasets and metadata,
+                            or an error message if the datasets cannot be retrieved
+        """
+        try:
+            return list_datasets_tool(
+                client,
+                dataset_ids=dataset_ids,
+                data_type=data_type,
+                dataset_name=dataset_name,
+                dataset_name_contains=dataset_name_contains,
+                metadata=metadata,
+                limit=limit,
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def list_examples(
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+        example_ids: Optional[List[str]] = None,
+        filter: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        splits: Optional[List[str]] = None,
+        inline_s3_urls: Optional[bool] = None,
+        include_attachments: Optional[bool] = None,
+        as_of: Optional[str] = None,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Fetch examples from a LangSmith dataset with advanced filtering options.
+
+        Note: Either dataset_id, dataset_name, or example_ids must be provided.
+        If multiple are provided, they are used in order of precedence: example_ids, dataset_id, dataset_name.
+
+        Args:
+            dataset_id (Optional[str]): Dataset ID to retrieve examples from
+            dataset_name (Optional[str]): Dataset name to retrieve examples from
+            example_ids (Optional[List[str]]): List of specific example IDs to retrieve
+            limit (Optional[int]): Maximum number of examples to return
+            offset (Optional[int]): Number of examples to skip before starting to return results
+            filter (Optional[str]): Filter string using LangSmith query syntax (e.g., 'has(metadata, {"key": "value"})')
+            metadata (Optional[Dict[str, Any]]): Dictionary of metadata to filter by
+            splits (Optional[List[str]]): List of dataset splits to include examples from
+            inline_s3_urls (Optional[bool]): Whether to inline S3 URLs (default: SDK default if not specified)
+            include_attachments (Optional[bool]): Whether to include attachments in response (default: SDK default if not specified)
+            as_of (Optional[str]): Dataset version tag OR ISO timestamp to retrieve examples as of that version/time
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the examples and metadata,
+                            or an error message if the examples cannot be retrieved
+        """
+        try:
+            return list_examples_tool(
+                client,
+                dataset_id=dataset_id,
+                dataset_name=dataset_name,
+                example_ids=example_ids,
+                filter=filter,
+                metadata=metadata,
+                splits=splits,
+                inline_s3_urls=inline_s3_urls,
+                include_attachments=include_attachments,
+                as_of=as_of,
+                limit=limit,
+                offset=offset,
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def read_dataset(
+        dataset_id: Optional[str] = None,
+        dataset_name: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Read a specific dataset from LangSmith.
+
+        Note: Either dataset_id or dataset_name must be provided to identify the dataset.
+        If both are provided, dataset_id takes precedence.
+
+        Args:
+            dataset_id (Optional[str]): Dataset ID to retrieve
+            dataset_name (Optional[str]): Dataset name to retrieve
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the dataset details,
+                            or an error message if the dataset cannot be retrieved
+        """
+        try:
+            return read_dataset_tool(
+                client,
+                dataset_id=dataset_id,
+                dataset_name=dataset_name,
+            )
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def read_example(
+        example_id: str,
+        as_of: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Read a specific example from LangSmith.
+
+        Args:
+            example_id (str): Example ID to retrieve
+            as_of (Optional[str]): Dataset version tag OR ISO timestamp to retrieve the example as of that version/time
+
+        Returns:
+            Dict[str, Any]: Dictionary containing the example details,
+                            or an error message if the example cannot be retrieved
+        """
+        try:
+            return read_example_tool(
+                client,
+                example_id=example_id,
+                as_of=as_of,
+            )
         except Exception as e:
             return {"error": str(e)}
