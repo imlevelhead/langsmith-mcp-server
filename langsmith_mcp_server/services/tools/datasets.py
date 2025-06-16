@@ -1,26 +1,8 @@
 """Tools for interacting with LangSmith datasets."""
 
-from datetime import datetime
-from typing import Any, Dict, Union
+from typing import Any, Dict
 
-
-def _parse_as_of_parameter(as_of: str) -> Union[datetime, str]:
-    """
-    Parse the as_of parameter, converting ISO timestamps to datetime objects
-    while leaving version tags as strings.
-
-    Args:
-        as_of: Dataset version tag OR ISO timestamp string
-
-    Returns:
-        datetime object if as_of is a valid ISO timestamp, otherwise the original string
-    """
-    try:
-        # Try to parse as ISO format datetime
-        return datetime.fromisoformat(as_of.replace("Z", "+00:00"))
-    except (ValueError, AttributeError):
-        # If parsing fails, assume it's a version tag and return as string
-        return as_of
+from langsmith_mcp_server.common.helpers import _parse_as_of_parameter
 
 
 def list_datasets_tool(

@@ -153,6 +153,22 @@ The server enables powerful capabilities including:
 - 📝 **Template Access**: "Pull the template for the 'legal-case-summarizer' prompt"
 - 🔧 **Configuration**: "Get the system message from a specific prompt template"
 
+## 🛠️ Available Tools
+
+The LangSmith MCP Server provides the following tools for integration with LangSmith:
+
+| Tool Name | Description |
+|-----------|-------------|
+| `list_prompts` | Fetch prompts from LangSmith with optional filtering. Filter by visibility (public/private) and limit results. |
+| `get_prompt_by_name` | Get a specific prompt by its exact name, returning the prompt details and template. |
+| `get_thread_history` | Retrieve the message history for a specific conversation thread, returning messages in chronological order. |
+| `get_project_runs_stats` | Get statistics about runs in a LangSmith project, either for the last run or overall project stats. |
+| `fetch_trace` | Fetch trace content for debugging and analyzing LangSmith runs using project name or trace ID. |
+| `list_datasets` | Fetch LangSmith datasets with filtering options by ID, type, name, or metadata. |
+| `list_examples` | Fetch examples from a LangSmith dataset with advanced filtering options. |
+| `read_dataset` | Read a specific dataset from LangSmith using dataset ID or name. |
+| `read_example` | Read a specific example from LangSmith using the example ID and optional version information. |
+
 ## 📄 License
 
 This project is distributed under the MIT License. For detailed terms and conditions, please refer to the LICENSE file.
