@@ -1,6 +1,6 @@
 """Tools for interacting with LangSmith traces and conversations."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from langsmith_mcp_server.common.helpers import get_last_run_stats
 
