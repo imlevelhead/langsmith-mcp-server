@@ -74,7 +74,7 @@ def register_tools(mcp, langsmith_client):
 
     # Register conversation tools
     @mcp.tool()
-    def get_thread_history(thread_id: str, project_name: str) -> List[Dict[str, Any]]:
+    def get_thread_history(thread_id: str, project_name: str) -> Dict[str, Any]:
         """
         Retrieve the message history for a specific conversation thread.
 
@@ -84,13 +84,13 @@ def register_tools(mcp, langsmith_client):
                                (format: "owner/project" or just "project")
 
         Returns:
-            List[Dict[str, Any]]: List of messages in chronological order from the thread history,
+            Dict[str, Any]: Dictionary containing the thread history,
                                 or an error message if the thread cannot be found
         """
         try:
             return get_thread_history_tool(client, thread_id, project_name)
         except Exception as e:
-            return [{"error": str(e)}]
+            return {"error": str(e)}
 
     # Register analytics tools
     @mcp.tool()

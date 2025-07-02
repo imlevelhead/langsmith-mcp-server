@@ -1,6 +1,6 @@
 """Tools for interacting with LangSmith traces and conversations."""
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from langsmith_mcp_server.common.helpers import get_last_run_stats
 
@@ -57,7 +57,7 @@ def fetch_trace_tool(client, project_name: str = None, trace_id: str = None) -> 
         return {"error": f"Error fetching last trace: {str(e)}"}
 
 
-def get_thread_history_tool(client, thread_id: str, project_name: str) -> List[Dict[str, Any]]:
+def get_thread_history_tool(client, thread_id: str, project_name: str) -> Dict[str, Any]:
     """
     Get the history for a specific thread.
 
@@ -67,7 +67,7 @@ def get_thread_history_tool(client, thread_id: str, project_name: str) -> List[D
         project_name: The name of the project containing the thread
 
     Returns:
-        List of messages in the thread history
+        A dictionary containing a list of messages in the thread history or an error.
     """
     try:
         # Filter runs by the specific thread and project
@@ -85,7 +85,7 @@ def get_thread_history_tool(client, thread_id: str, project_name: str) -> List[D
         ]
 
         if not runs or len(runs) == 0:
-            return [{"error": f"No runs found for thread {thread_id} in project {project_name}"}]
+            return {"error": f"No runs found for thread {thread_id} in project {project_name}"}
 
         # Sort by start time to get the most recent interaction
         runs = sorted(runs, key=lambda run: run.start_time, reverse=True)
@@ -113,12 +113,12 @@ def get_thread_history_tool(client, thread_id: str, project_name: str) -> List[D
                 messages.append(latest_run.outputs["message"])
 
         if not messages or len(messages) == 0:
-            return [{"error": f"No messages found in the run for thread {thread_id}"}]
+            return {"error": f"No messages found in the run for thread {thread_id}"}
 
-        return messages
+        return {"result": messages}
 
     except Exception as e:
-        return [{"error": f"Error fetching thread history: {str(e)}"}]
+        return {"error": f"Error fetching thread history: {str(e)}"}
 
 
 def get_project_runs_stats_tool(
