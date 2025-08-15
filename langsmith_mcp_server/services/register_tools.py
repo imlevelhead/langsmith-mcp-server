@@ -94,23 +94,21 @@ def register_tools(mcp, langsmith_client):
 
     # Register analytics tools
     @mcp.tool()
-    def get_project_runs_stats(project_name: str, is_last_run: str = "true") -> Dict[str, Any]:
+    def get_project_runs_stats(project_name: str = None, trace_id: str = None) -> Dict[str, Any]:
         """
         Get statistics about runs in a LangSmith project.
 
         Args:
             project_name (str): The name of the project to analyze
                               (format: "owner/project" or just "project")
-            is_last_run (str): Set to "true" to get only the last run's stats,
-                             set to "false" for overall project stats (default: "true")
+            trace_id (str): The specific ID of the trace to fetch (preferred parameter)
 
         Returns:
             Dict[str, Any]: Dictionary containing the requested project run statistics
                           or an error message if statistics cannot be retrieved
         """
         try:
-            is_last_run_bool = is_last_run.lower() == "true"
-            return get_project_runs_stats_tool(client, project_name, is_last_run_bool)
+            return get_project_runs_stats_tool(client, project_name, trace_id)
         except Exception as e:
             return {"error": str(e)}
 
