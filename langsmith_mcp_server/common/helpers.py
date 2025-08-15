@@ -44,4 +44,3 @@ def _parse_as_of_parameter(as_of: str) -> Union[datetime, str]:
     except (ValueError, AttributeError):
         # If parsing fails, assume it's a version tag and return as string
         return as_of
-

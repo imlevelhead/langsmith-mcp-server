@@ -45,7 +45,7 @@ def fetch_trace_tool(client, project_name: str = None, trace_id: str = None) -> 
                 "thread_id",
             ],
             is_root=True,
-            limit=1
+            limit=1,
         )
 
         runs = list(runs)
@@ -143,7 +143,7 @@ def get_project_runs_stats_tool(
     trace_id: str = None,
 ) -> Dict[str, Any]:
     """
-    Get the project runs stats. 
+    Get the project runs stats.
 
     Note: Only one of the parameters (project_name or trace_id) is required.
     trace_id is preferred if both are provided.
