@@ -66,7 +66,7 @@ Add the following configuration to your MCP client settings:
 {
     "mcpServers": {
         "LangSmith API MCP Server": {
-            "command": "/path/to/uvx",
+            "command": "/path/to/uv",
             "args": [
                 "--directory",
                 "/path/to/langsmith-mcp-server/langsmith_mcp_server",
