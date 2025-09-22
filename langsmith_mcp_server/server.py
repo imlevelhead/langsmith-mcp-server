@@ -20,9 +20,20 @@ from langsmith_mcp_server.services import (
 # Create MCP server
 mcp = FastMCP("LangSmith API MCP Server")
 
-# Default API key (will be overridden in main or by direct assignment)
+# Default configuration (will be overridden in main or by direct assignment)
 default_api_key = os.environ.get("LANGSMITH_API_KEY")
-langsmith_client = LangSmithClient(default_api_key) if default_api_key else None
+default_workspace_id = os.environ.get("LANGSMITH_WORKSPACE_ID")
+default_endpoint = os.environ.get("LANGSMITH_ENDPOINT")
+
+langsmith_client = (
+    LangSmithClient(
+        api_key=default_api_key,
+        workspace_id=default_workspace_id,
+        endpoint=default_endpoint
+    ) 
+    if default_api_key 
+    else None
+)
 
 # Register all tools with the server using simplified registration modules
 register_tools(mcp, langsmith_client)

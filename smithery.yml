@@ -11,15 +11,32 @@ startCommand:
       langsmithApiKey:
         type: string
         description: Your Langsmith API key
+      langsmithWorkspaceId:
+        type: string
+        description: Optional workspace ID for API keys scoped to multiple workspaces
+      langsmithEndpoint:
+        type: string
+        description: Optional custom endpoint URL (for self-hosted or EU region)
   commandFunction:
     # A JS function that produces the CLI command based on the given config to start the MCP on stdio.
     |-
-    (config) => ({
-      command: 'langsmith-mcp',
-      args: [],
-      env: {
-        LANGCHAIN_API_KEY: config.langsmithApiKey
+    (config) => {
+      const env = {
+        LANGSMITH_API_KEY: config.langsmithApiKey
+      };
+      if (config.langsmithWorkspaceId) {
+        env.LANGSMITH_WORKSPACE_ID = config.langsmithWorkspaceId;
       }
-    })
+      if (config.langsmithEndpoint) {
+        env.LANGSMITH_ENDPOINT = config.langsmithEndpoint;
+      }
+      return {
+        command: 'langsmith-mcp',
+        args: [],
+        env: env
+      };
+    }
   exampleConfig:
     langsmithApiKey: lsv2_pt_1234567890
+    langsmithWorkspaceId: your_workspace_id
+    langsmithEndpoint: https://api.smith.langchain.com

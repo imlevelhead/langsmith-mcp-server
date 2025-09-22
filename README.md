@@ -51,7 +51,9 @@ Once you have the LangSmith MCP Server, you can integrate it with various MCP-co
                    "langsmith-mcp-server"
                ],
                "env": {
-                   "LANGSMITH_API_KEY": "your_langsmith_api_key"
+                   "LANGSMITH_API_KEY": "your_langsmith_api_key",
+                   "LANGSMITH_WORKSPACE_ID": "your_workspace_id",
+                   "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
                }
            }
        }
@@ -74,7 +76,9 @@ Add the following configuration to your MCP client settings:
                 "server.py"
             ],
             "env": {
-                "LANGSMITH_API_KEY": "your_langsmith_api_key"
+                "LANGSMITH_API_KEY": "your_langsmith_api_key",
+                "LANGSMITH_WORKSPACE_ID": "your_workspace_id",
+                "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
             }
         }
     }
@@ -84,7 +88,9 @@ Add the following configuration to your MCP client settings:
 Replace the following placeholders:
 - `/path/to/uv`: The absolute path to your uv installation (e.g., `/Users/username/.local/bin/uv`). You can find it running `which uv`.
 - `/path/to/langsmith-mcp-server`: The absolute path to your langsmith-mcp project directory
-- `your_langsmith_api_key`: Your LangSmith API key
+- `your_langsmith_api_key`: Your LangSmith API key (required)
+- `your_workspace_id`: Your LangSmith workspace ID (optional, for API keys scoped to multiple workspaces)
+- `https://api.smith.langchain.com`: The LangSmith API endpoint (optional, defaults to the standard endpoint)
 
 Example configuration:
 ```json
@@ -96,7 +102,9 @@ Example configuration:
                 "langsmith-mcp-server"
             ],
             "env": {
-                "LANGSMITH_API_KEY": "lsv2_pt_1234"
+                "LANGSMITH_API_KEY": "lsv2_pt_1234",
+                "LANGSMITH_WORKSPACE_ID": "your_workspace_id",
+                "LANGSMITH_ENDPOINT": "https://api.smith.langchain.com"
             }
         }
     }
@@ -106,6 +114,21 @@ Example configuration:
 Copy this configuration in Cursor > MCP Settings.
 
 ![LangSmith Cursor Integration](docs/assets/cursor_mcp.png)
+
+### 🔧 Environment Variables
+
+The LangSmith MCP Server supports the following environment variables:
+
+| Variable | Required | Description | Example |
+|----------|----------|-------------|---------|
+| `LANGSMITH_API_KEY` | ✅ Yes | Your LangSmith API key for authentication | `lsv2_pt_1234567890` |
+| `LANGSMITH_WORKSPACE_ID` | ❌ No | Workspace ID for API keys scoped to multiple workspaces | `your_workspace_id` |
+| `LANGSMITH_ENDPOINT` | ❌ No | Custom API endpoint URL (for self-hosted or EU region) | `https://api.smith.langchain.com` |
+
+**Notes:**
+- Only `LANGSMITH_API_KEY` is required for basic functionality
+- `LANGSMITH_WORKSPACE_ID` is useful when your API key has access to multiple workspaces
+- `LANGSMITH_ENDPOINT` allows you to use custom endpoints for self-hosted LangSmith installations or the EU region
 
 ## 🧪 Development and Contributing 🤝
 
