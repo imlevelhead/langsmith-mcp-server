@@ -13,6 +13,7 @@ from langsmith_mcp_server.services.tools.prompts import (
     list_prompts_tool,
 )
 from langsmith_mcp_server.services.tools.traces import (
+    fetch_run_tool,
     fetch_trace_tool,
     get_project_runs_stats_tool,
     get_thread_history_tool,
@@ -132,6 +133,33 @@ def register_tools(mcp, langsmith_client):
         """
         try:
             return fetch_trace_tool(client, project_name, trace_id)
+        except Exception as e:
+            return {"error": str(e)}
+
+    @mcp.tool()
+    def fetch_run(run_id: str) -> Dict[str, Any]:
+        """
+        Fetch detailed information about a specific run by its run ID.
+        
+        A trace can contain multiple runs. This tool analyzes a single run in detail,
+        including its inputs, outputs, timing, costs, errors, and child runs (sub-steps).
+        Use this when you have a specific run ID and want to understand what happened
+        in that particular execution step.
+
+        Args:
+            run_id (str): The unique ID of the run to fetch (starts with 'run_' or is a UUID)
+
+        Returns:
+            Dict[str, Any]: Dictionary containing comprehensive run information including:
+                          - Run metadata (name, type, status, timing)
+                          - Input and output data
+                          - Token usage and costs
+                          - Error information if applicable
+                          - List of child runs that are part of this run
+                          - Trace ID for context
+        """
+        try:
+            return fetch_run_tool(client, run_id)
         except Exception as e:
             return {"error": str(e)}
 

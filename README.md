@@ -175,6 +175,7 @@ The server enables powerful capabilities including:
 - 🔍 **Smart Search**: "Find private prompts containing the word 'joke'"
 - 📝 **Template Access**: "Pull the template for the 'legal-case-summarizer' prompt"
 - 🔧 **Configuration**: "Get the system message from a specific prompt template"
+- 🐛 **Run Analysis**: "Analyze what happened in run 'run-abc123' including its child runs and error details"
 
 ## 🛠️ Available Tools
 
@@ -187,6 +188,7 @@ The LangSmith MCP Server provides the following tools for integration with LangS
 | `get_thread_history` | Retrieve the message history for a specific conversation thread, returning messages in chronological order. |
 | `get_project_runs_stats` | Get statistics about runs in a LangSmith project, either for the last run or overall project stats. |
 | `fetch_trace` | Fetch trace content for debugging and analyzing LangSmith runs using project name or trace ID. |
+| `fetch_run` | Fetch detailed information about a specific run by its run ID, including inputs, outputs, timing, costs, errors, and child runs. |
 | `list_datasets` | Fetch LangSmith datasets with filtering options by ID, type, name, or metadata. |
 | `list_examples` | Fetch examples from a LangSmith dataset with advanced filtering options. |
 | `read_dataset` | Read a specific dataset from LangSmith using dataset ID or name. |
